@@ -22,6 +22,8 @@ import AuditLog from './pages/AuditLog.jsx'
 import Surveys from './pages/Surveys.jsx'
 import Update from './pages/Update.jsx'
 import Poster from './pages/Poster.jsx'
+import Subscriptions from './pages/Subscriptions.jsx'
+import AppSettings from './pages/AppSettings.jsx'
 
 function Protected({ children }) {
   const { user, loading } = useAuth()
@@ -53,6 +55,8 @@ export default function App() {
         <Route path="surveys" element={<Surveys />} />
         <Route path="update" element={<Update />} />
         <Route path="poster" element={<Poster />} />
+        <Route path="subscriptions" element={<Subscriptions />} />
+        <Route path="app-settings" element={<AppSettings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
