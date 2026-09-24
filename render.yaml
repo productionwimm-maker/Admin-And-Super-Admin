@@ -1,0 +1,71 @@
+# Render Blueprint — deploys all three services in one go.
+# In Render: New + → "Blueprint" → connect this repo → Apply.
+#
+# It creates:
+#   1. wimm-admin-api    — the FastAPI backend       (folder: Backend)
+#   2. wimm-admin        — the Admin dashboard        (folder: Admin, static)
+#   3. wimm-superadmin   — the Super Admin dashboard  (folder: Super-Admin, static)
+services:
+  # ── Backend API (shared by both portals) ─────────────────────────────────
+  - type: web
+    name: wimm-admin-api
+    runtime: python
+    rootDir: Backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: USE_MOCK
+        value: "false"              # live Firestore data (set FIREBASE_SERVICE_ACCOUNT below)
+      - key: CORS_ORIGINS
+        value: "*"                   # tighten to your two portal URLs later
+      - key: FIREBASE_PROJECT_ID
+        value: where-is-my-medicine-3aaaa
+      # Default login credentials (override here to change them):
+      - key: SEED_ADMIN_EMAIL
+        value: admin@whereismymedicine.com
+      - key: SEED_ADMIN_PASSWORD
+        value: Admin@Wimm@2026
+      - key: SEED_SUPERADMIN_EMAIL
+        value: superadmin@whereismymedicine.com
+      - key: SEED_SUPERADMIN_PASSWORD
+        value: Superadmin@Wimm@2026
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false                  # paste service-account JSON (needed when USE_MOCK=false)
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+
+  # ── Admin portal (static React) ──────────────────────────────────────────
+  - type: web
+    name: wimm-admin
+    runtime: static
+    rootDir: Admin
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false                  # set to the API URL, e.g. https://wimm-admin-api.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # ── Super Admin portal (static React) ────────────────────────────────────
+  - type: web
+    name: wimm-superadmin
+    runtime: static
+    rootDir: Super-Admin
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false                  # same API URL as above
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

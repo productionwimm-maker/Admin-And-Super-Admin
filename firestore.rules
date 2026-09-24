@@ -1,0 +1,248 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // All sign-in in this app is anonymous (signInAnonymously), so the only
+    // distinction we can make is "has an auth session" vs. not.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // ── customers/{phone} ────────────────────────────────────────────────
+    // Customer profile (name/age/gender/phone), document id = "+91XXXXXXXXXX".
+    // Looked up by phone so the same account follows the user across devices.
+    match /customers/{phone} {
+      allow read, write: if isSignedIn();
+    }
+
+    // ── pharmacy_accounts/{phone} ───────────────────────────────────────
+    // Full pharmacy profile backup (license, Aadhar, address, discount,
+    // referral code, pharmacy code, profile photo), id = "+91XXXXXXXXXX".
+    //
+    // verificationStatus / rejectionReason are admin-controlled: the app can
+    // set verificationStatus to "pending" (new signup or resubmit after a
+    // rejection) but can never set it to "approved" or "rejected" itself —
+    // only the admin/super-admin dashboard (via the Admin SDK, which bypasses
+    // these rules) can do that.
+    match /pharmacy_accounts/{phone} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.resource.data.verificationStatus == "pending";
+
+      allow update: if isSignedIn()
+        && (
+          request.resource.data.verificationStatus == resource.data.verificationStatus
+          || (resource.data.verificationStatus == "rejected"
+              && request.resource.data.verificationStatus == "pending")
+        );
+    }
+
+    // ── pharmacies/{uid} ─────────────────────────────────────────────────
+    // Public presence used for nearby search (name, lat/lng, online flag,
+    // discountPercent badge, pharmacyCode).
+    // Document id is the pharmacy's own auth uid.
+    match /pharmacies/{pharmacyId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == pharmacyId;
+    }
+
+    // ── medicine_requests/{requestId} ──────────────────────────────────
+    // Created by a customer; every nearby pharmacy reads the list and then
+    // writes only its own entry under responses.{pharmacyUid}. A pharmacy
+    // may also touch typing.{pharmacyUid} (a timestamp, or deleted) while
+    // filling in its response — this drives the customer's realtime
+    // "N pharmacies responding" indicator and carries no sensitive data.
+    match /medicine_requests/{requestId} {
+      allow read, create: if isSignedIn();
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['responses', 'typing'])
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['responses'])
+          || request.resource.data.responses[request.auth.uid] is map
+        );
+      allow delete: if false;
+    }
+
+    // ── prescription_requests/{requestId} ──────────────────────────────
+    // Same pattern as medicine_requests, responses also carry tick points.
+    match /prescription_requests/{requestId} {
+      allow read, create: if isSignedIn();
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['responses', 'typing'])
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['responses'])
+          || request.resource.data.responses[request.auth.uid] is map
+        );
+      allow delete: if false;
+    }
+
+    // ── referral_codes/{code} ───────────────────────────────────────────
+    // Salesman-issued codes, created/managed manually via the Firebase
+    // console (or an admin tool later). Pharmacies may only read a code to
+    // validate it during signup; clients can never create/modify codes.
+    match /referral_codes/{code} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ── pharmacy_code_counters/{stateCode} ──────────────────────────────
+    // Tracks the last-assigned serial number per state code (e.g. "WB")
+    // used to generate pharmacy codes like WIMMPWB001. Incremented via a
+    // client-side transaction during signup.
+    match /pharmacy_code_counters/{stateCode} {
+      allow read, write: if isSignedIn();
+    }
+
+    // ── orders/{orderId} ─────────────────────────────────────────────────
+    // Created by a customer when they place an order with a pharmacy.
+    // Both the customer and the assigned pharmacy read/update the same
+    // document (status, deliveryCode, rider details, payment info, etc.).
+    match /orders/{orderId} {
+      allow read, create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if false;
+    }
+
+    // ── chats/{orderId}/messages/{messageId} ────────────────────────────
+    // Realtime chat between a customer and the pharmacy for a specific
+    // order. Messages are immutable once sent.
+    match /chats/{orderId}/messages/{messageId} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // ── doctors/{phone} ─────────────────────────────────────────────────
+    // Doctor profile (name, specialization, experience, fees, reg number),
+    // document id = "+91XXXXXXXXXX". Read so patients can see doctor info.
+    match /doctors/{phone} {
+      allow read, write: if isSignedIn();
+    }
+
+    // ── consultations/{id} ──────────────────────────────────────────────
+    // A patient posts a request; every doctor reads it and appends a bid;
+    // the patient approves a bid, pays, and both join the video room.
+    match /consultations/{consultationId} {
+      allow read, create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if false;
+    }
+
+    // ── calls/{roomId} ──────────────────────────────────────────────────
+    // WebRTC signaling for the in-app video consultation: offer/answer plus
+    // ICE candidate subcollections. Both peers read & write the same room.
+    match /calls/{roomId} {
+      allow read, write: if isSignedIn();
+      match /{document=**} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // ── pharmacy_earnings/{phone} ───────────────────────────────────────
+    // Tracks a pharmacy's unclaimed/claimed income from paid orders,
+    // id = "+91XXXXXXXXXX".
+    match /pharmacy_earnings/{phone} {
+      allow read, write: if isSignedIn();
+
+      // ── redemptions/{redemptionId} ────────────────────────────────────
+      // Log of "swipe to redeem" payout claims.
+      match /redemptions/{redemptionId} {
+        allow read, create: if isSignedIn();
+        allow update, delete: if false;
+      }
+    }
+
+    // ── customer_refunds/{phone} ─────────────────────────────────────────
+    // Tracks a customer's refund balance from orders/{orderId} the pharmacy
+    // denied (status == DENIED) — separate from the admin-issued refunds/
+    // collection below. id = "+91XXXXXXXXXX".
+    match /customer_refunds/{phone} {
+      allow read, write: if isSignedIn();
+
+      // ── withdrawals/{withdrawalId} ──────────────────────────────────────
+      // Log of "swipe to withdraw" claims.
+      match /withdrawals/{withdrawalId} {
+        allow read, create: if isSignedIn();
+        allow update, delete: if false;
+      }
+    }
+
+    // ── broadcasts/{broadcastId} ─────────────────────────────────────────
+    // Admin/Super-Admin sends broadcast messages (title, message, audience,
+    // status). The app listens to SENT broadcasts matching its audience
+    // to surface in-app notification popups and the notification bell.
+    match /broadcasts/{broadcastId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ── refunds/{refundId} ───────────────────────────────────────────────
+    // Written by the Admin/Super-Admin dashboard (via the Admin SDK, which
+    // bypasses these rules) when a refund is issued for an order. The app
+    // reads its own customer's refunds to show them in Profile and to pop
+    // up a "refund issued" notification.
+    match /refunds/{refundId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ── feature_flags/config ────────────────────────────────────────────
+    // Single doc edited via the Admin/Super-Admin "Feature Flags" page.
+    // The app reads it to enable/disable features, show "Coming soon"
+    // screens, and enforce minimum app versions. Admin-only writes happen
+    // via the Admin SDK, which bypasses these rules.
+    match /feature_flags/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ── app_updates/latest ───────────────────────────────────────────────
+    // Single doc published via the Super-Admin "Update" page (apkUrl,
+    // versionCode, message, active). Every running app listens to it in
+    // realtime to show the in-app "Update Available" dialog and, on next
+    // launch, prompt users who missed it. Writes happen via the Admin SDK,
+    // which bypasses these rules.
+    match /app_updates/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ── survey_inventory/{phone} ─────────────────────────────────────────────
+    // Pharmacy feature-interest survey responses written by the app.
+    // Any signed-in user may write their own response; admin reads via Admin SDK.
+    match /survey_inventory/{phone} {
+      allow read, write: if isSignedIn();
+    }
+
+    // ── otp_codes/{phone} ────────────────────────────────────────────────
+    // Self-device OTP: written by the app before sign-in (no auth session
+    // yet), so this can't gate on isSignedIn(). code/expiresAt are checked
+    // by the app itself, not the rule.
+    match /otp_codes/{phone} {
+      allow create, update: if request.resource.data.keys().hasOnly(['code', 'createdAt', 'expiresAt', 'verified'])
+        && request.resource.data.code is string
+        && request.resource.data.code.size() == 6
+        && request.resource.data.verified == false;
+
+      allow get: if true;
+      allow delete: if true;
+      allow list: if false;
+    }
+
+    // ── complaints/{complaintId} ─────────────────────────────────────────
+    // A customer files a complaint against a pharmacy (create), and reads its
+    // own complaints for "My Complaints" (read). The Admin/Super-Admin panel
+    // takes actions via the Admin SDK (bypasses these rules), so client
+    // updates/deletes are denied.
+    match /complaints/{complaintId} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // Deny anything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
