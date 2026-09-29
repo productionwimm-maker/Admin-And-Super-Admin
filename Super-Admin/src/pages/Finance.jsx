@@ -7,8 +7,8 @@ import { api } from '../api.js'
 import { Loading, ErrorNote } from '../components/Helpers.jsx'
 
 // Super-Admin only. Two sub-tabs:
-//   • Money & Transactions — live totals, charts, realtime transaction feed
-//   • Reports — generate & download formatted Excel (budget/profit/loss/tax/gst/all)
+//   • Money & Transactions — live totals, themed charts, realtime feed
+//   • Reports — generate & download professional Excel workbooks
 const PERIODS = [
   { v: 'hour', label: 'This hour' },
   { v: 'day', label: 'Today' },
@@ -17,19 +17,37 @@ const PERIODS = [
   { v: 'fy', label: 'This FY' },
 ]
 const GRANS = ['hour', 'day', 'week', 'month', 'fy']
-const COLORS = ['#0E7C66', '#2F9E44', '#4C6EF5', '#F59F00', '#E8590C', '#AE3EC9']
+
+// Palette tuned for the dark-green theme.
+const PIE_COLORS = ['#00c853', '#26c6da', '#f1c40f', '#ff8a65', '#ba68c8']
+const AXIS = { tick: { fill: '#a9c2a9', fontSize: 11 }, stroke: '#1f3a29' }
+const GRID = '#16301f'
+const TIP = {
+  contentStyle: { background: '#0e1a0e', border: '1px solid #1f3a29', borderRadius: 8, color: '#eaf3ea' },
+  labelStyle: { color: '#a9c2a9' }, itemStyle: { color: '#eaf3ea' },
+}
+const LEGEND = { wrapperStyle: { color: '#a9c2a9', fontSize: 12 } }
 
 const inr = (n) => `${n < 0 ? '-' : ''}₹${Math.abs(Math.round(n || 0)).toLocaleString('en-IN')}`
 
-function Card({ label, value, tone }) {
-  const color = tone === 'bad' ? '#E03131' : tone === 'good' ? '#0E7C66' : 'inherit'
+function Kpi({ label, value, tone }) {
+  const color = tone === 'bad' ? '#ff7b76' : tone === 'good' ? '#00c853' : '#d6ffe6'
   return (
-    <div style={{
-      flex: '1 1 150px', minWidth: 150, background: 'var(--card, #fff)',
-      border: '1px solid var(--line, #e5e7eb)', borderRadius: 14, padding: '14px 16px',
-    }}>
-      <div className="muted" style={{ fontSize: 12 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div>
+    <div className="card">
+      <div className="value" style={{ color }}>{value}</div>
+      <div className="label">{label}</div>
+    </div>
+  )
+}
+
+function Panel({ title, right, children }) {
+  return (
+    <div className="panel">
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
+        <h3 style={{ margin: 0, fontSize: 15 }}>{title}</h3>
+        {right}
+      </div>
+      {children}
     </div>
   )
 }
@@ -55,7 +73,6 @@ export default function Finance() {
 
   useEffect(() => { loadMoney() /* eslint-disable-next-line */ }, [period, gran])
 
-  // Realtime: refresh the money tab every 12s.
   useEffect(() => {
     if (tab !== 'money') return
     const id = setInterval(loadMoney, 12000)
@@ -70,21 +87,18 @@ export default function Finance() {
     } catch (e) { setErr(e.message) } finally { setBusy('') }
   }
 
-  const pie = useMemo(
-    () => (breakdown?.slices || []).filter((s) => s.value > 0),
-    [breakdown],
-  )
+  const pie = useMemo(() => (breakdown?.slices || []).filter((s) => s.value > 0), [breakdown])
 
   return (
     <div className="page">
       <h1>Finance</h1>
       <p className="muted">Every rupee moving through WIMM — live. Super Admin only.</p>
 
-      <div className="row" style={{ gap: 8, marginBottom: 14 }}>
-        <button className={tab === 'money' ? '' : 'sm'} onClick={() => setTab('money')}>Money &amp; Transactions</button>
-        <button className={tab === 'reports' ? '' : 'sm'} onClick={() => setTab('reports')}>Reports</button>
+      <div className="row" style={{ gap: 8, marginBottom: 18 }}>
+        <button className={tab === 'money' ? 'primary' : ''} onClick={() => setTab('money')}>Money &amp; Transactions</button>
+        <button className={tab === 'reports' ? 'primary' : ''} onClick={() => setTab('reports')}>Reports</button>
         <span style={{ flex: 1 }} />
-        <select value={period} onChange={(e) => setPeriod(e.target.value)}>
+        <select style={{ width: 150 }} value={period} onChange={(e) => setPeriod(e.target.value)}>
           {PERIODS.map((p) => <option key={p.v} value={p.v}>{p.label}</option>)}
         </select>
       </div>
@@ -93,121 +107,122 @@ export default function Finance() {
 
       {tab === 'money' && (!summary ? <Loading /> : (
         <>
-          <div className="row" style={{ gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-            <Card label="Revenue" value={inr(summary.revenue)} tone="good" />
-            <Card label="Profit" value={inr(summary.profit)} tone={summary.profit < 0 ? 'bad' : 'good'} />
-            <Card label="Loss" value={inr(summary.loss)} tone={summary.loss > 0 ? 'bad' : undefined} />
-            <Card label="Order GMV" value={inr(summary.gmv)} />
-            <Card label={`GST (18%)`} value={inr(summary.gst)} />
-            <Card label="Refunds" value={inr(summary.refunds)} tone={summary.refunds > 0 ? 'bad' : undefined} />
+          <div className="cards">
+            <Kpi label="Revenue" value={inr(summary.revenue)} tone="good" />
+            <Kpi label="Profit" value={inr(summary.profit)} tone={summary.profit < 0 ? 'bad' : 'good'} />
+            <Kpi label="Loss" value={inr(summary.loss)} tone={summary.loss > 0 ? 'bad' : undefined} />
+            <Kpi label="Order GMV" value={inr(summary.gmv)} />
+            <Kpi label="GST (18%)" value={inr(summary.gst)} />
+            <Kpi label="Refunds" value={inr(summary.refunds)} tone={summary.refunds > 0 ? 'bad' : undefined} />
           </div>
 
-          <div className="row" style={{ gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 340px', minWidth: 320, background: 'var(--card,#fff)', border: '1px solid var(--line,#e5e7eb)', borderRadius: 14, padding: 16 }}>
-              <h3 style={{ marginTop: 0 }}>Where the money comes from</h3>
-              {pie.length === 0 ? <p className="muted">No inflows in this period.</p> : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <PieChart>
-                    <Pie data={pie} dataKey="value" nameKey="name" outerRadius={100} label={(e) => e.name}>
-                      {pie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip formatter={(v) => inr(v)} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
+          <div className="row" style={{ gap: 18, flexWrap: 'wrap', alignItems: 'stretch' }}>
+            <div style={{ flex: '1 1 340px', minWidth: 320 }}>
+              <Panel title="Where the money comes from">
+                {pie.length === 0 ? <p className="muted">No inflows in this period.</p> : (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <PieChart>
+                      <Pie data={pie} dataKey="value" nameKey="name" outerRadius={100} innerRadius={48}
+                        paddingAngle={2} stroke="#0e1a0e">
+                        {pie.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip {...TIP} formatter={(v) => inr(v)} />
+                      <Legend {...LEGEND} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </Panel>
             </div>
 
-            <div style={{ flex: '1 1 420px', minWidth: 340, background: 'var(--card,#fff)', border: '1px solid var(--line,#e5e7eb)', borderRadius: 14, padding: 16 }}>
-              <div className="row" style={{ justifyContent: 'space-between' }}>
-                <h3 style={{ marginTop: 0 }}>Trend by {gran}</h3>
-                <select value={gran} onChange={(e) => setGran(e.target.value)}>
+            <div style={{ flex: '1 1 440px', minWidth: 360 }}>
+              <Panel
+                title={`Trend by ${gran}`}
+                right={<select style={{ width: 110 }} value={gran} onChange={(e) => setGran(e.target.value)}>
                   {GRANS.map((g) => <option key={g} value={g}>{g}</option>)}
-                </select>
-              </div>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={series}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                  <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v) => inr(v)} />
-                  <Legend />
-                  <Bar dataKey="revenue" name="Revenue" fill="#0E7C66" />
-                  <Bar dataKey="gmv" name="GMV" fill="#4C6EF5" />
-                  <Bar dataKey="refunds" name="Refunds" fill="#E03131" />
-                </BarChart>
-              </ResponsiveContainer>
+                </select>}
+              >
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={series}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
+                    <XAxis dataKey="bucket" {...AXIS} />
+                    <YAxis {...AXIS} />
+                    <Tooltip {...TIP} formatter={(v) => inr(v)} cursor={{ fill: 'rgba(0,200,83,0.06)' }} />
+                    <Legend {...LEGEND} />
+                    <Bar dataKey="revenue" name="Revenue" fill="#00c853" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="gmv" name="GMV" fill="#26c6da" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="refunds" name="Refunds" fill="#e53935" radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Panel>
             </div>
           </div>
 
-          <div style={{ marginTop: 16, background: 'var(--card,#fff)', border: '1px solid var(--line,#e5e7eb)', borderRadius: 14, padding: 16 }}>
-            <h3 style={{ marginTop: 0 }}>Revenue vs Profit over time</h3>
+          <Panel title="Revenue vs Profit over time">
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={series}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v) => inr(v)} />
-                <Legend />
-                <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#0E7C66" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="profit" name="Profit" stroke="#F59F00" strokeWidth={2} dot={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
+                <XAxis dataKey="bucket" {...AXIS} />
+                <YAxis {...AXIS} />
+                <Tooltip {...TIP} formatter={(v) => inr(v)} />
+                <Legend {...LEGEND} />
+                <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#00c853" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="profit" name="Profit" stroke="#f1c40f" strokeWidth={2.5} dot={false} />
               </LineChart>
             </ResponsiveContainer>
-          </div>
+          </Panel>
 
-          <div style={{ marginTop: 16 }}>
-            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: '8px 0' }}>Live transactions</h3>
-              <span className="muted" style={{ fontSize: 12 }}>● auto-refreshing every 12s · {tx.length} shown</span>
-            </div>
-            <div className="table-wrap">
-              <table className="table">
-                <thead><tr><th>Time</th><th>Type</th><th>In/Out</th><th>Party</th><th>Amount</th><th>Ref</th></tr></thead>
-                <tbody>
-                  {tx.length === 0 && <tr><td colSpan={6} className="muted">No transactions in this period.</td></tr>}
-                  {tx.map((t, i) => (
-                    <tr key={i}>
-                      <td>{new Date(t.at).toLocaleString('en-IN')}</td>
-                      <td>{t.type}</td>
-                      <td style={{ color: t.direction === 'out' ? '#E03131' : '#0E7C66' }}>{t.direction === 'out' ? 'OUT' : 'IN'}</td>
-                      <td>{t.party || '—'}</td>
-                      <td style={{ fontWeight: 600 }}>{inr(t.amount)}</td>
-                      <td className="muted" style={{ fontSize: 12 }}>{t.ref || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', margin: '4px 2px 8px' }}>
+            <h3 style={{ margin: 0, fontSize: 15 }}>Live transactions</h3>
+            <span className="badge green">● live · refreshes 12s · {tx.length} shown</span>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Time</th><th>Type</th><th>Flow</th><th>Party</th><th>Amount</th><th>Reference</th></tr></thead>
+              <tbody>
+                {tx.length === 0 && <tr><td colSpan={6} className="muted">No transactions in this period.</td></tr>}
+                {tx.map((t, i) => (
+                  <tr key={i}>
+                    <td className="muted">{new Date(t.at).toLocaleString('en-IN')}</td>
+                    <td>{t.type}</td>
+                    <td><span className={`badge ${t.direction === 'out' ? 'red' : 'green'}`}>{t.direction === 'out' ? 'OUT' : 'IN'}</span></td>
+                    <td>{t.party || '—'}</td>
+                    <td style={{ fontWeight: 700, color: t.direction === 'out' ? '#ff7b76' : '#d6ffe6' }}>{inr(t.amount)}</td>
+                    <td className="muted" style={{ fontSize: 12 }}>{t.ref || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </>
       ))}
 
       {tab === 'reports' && (
-        <div style={{ maxWidth: 720 }}>
-          <p className="muted">Generate neatly-formatted Excel workbooks. Pick the period (above) and the breakdown granularity, then download.</p>
-          <div className="row" style={{ gap: 10, alignItems: 'center', margin: '10px 0 18px' }}>
-            <label>Breakdown granularity:</label>
-            <select value={gran} onChange={(e) => setGran(e.target.value)}>
+        <div style={{ maxWidth: 760 }}>
+          <p className="muted">Generate professional Excel workbooks. Choose the period (top-right) and the breakdown granularity, then download.</p>
+          <div className="row" style={{ gap: 10, margin: '12px 0 18px' }}>
+            <label style={{ margin: 0 }}>Breakdown granularity</label>
+            <select style={{ width: 130 }} value={gran} onChange={(e) => setGran(e.target.value)}>
               {GRANS.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
-          <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
+          <div className="cards" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))' }}>
             {[
               ['budget', 'Budget'], ['profit', 'Profit'], ['loss', 'Loss'],
-              ['tax', 'Tax'], ['gst', 'GST'], ['all', 'Everything (all sheets)'],
+              ['tax', 'Tax'], ['gst', 'GST'], ['all', 'Everything'],
             ].map(([type, label]) => (
-              <button key={type} onClick={() => exportXlsx(type)} disabled={!!busy}>
-                {busy === type ? 'Preparing…' : `⬇ ${label}`}
+              <button key={type} className={type === 'all' ? 'primary' : ''} style={{ padding: '16px', justifyContent: 'center' }}
+                onClick={() => exportXlsx(type)} disabled={!!busy}>
+                {busy === type ? 'Preparing…' : `⬇  ${label}`}
               </button>
             ))}
           </div>
-          <div style={{ marginTop: 20, background: 'var(--card,#fff)', border: '1px solid var(--line,#e5e7eb)', borderRadius: 12, padding: 16 }}>
-            <h3 style={{ marginTop: 0 }}>What's inside</h3>
-            <ul className="muted" style={{ lineHeight: 1.7 }}>
-              <li><b>Budget</b> — revenue, GMV, delivery, refunds, expenses, net profit & loss, plus a per-{gran} breakdown.</li>
-              <li><b>Profit</b> / <b>Loss</b> — P&amp;L statement (loss shown as a negative / dedicated loss line).</li>
-              <li><b>Tax</b> / <b>GST</b> — taxable value and 18% GST component of revenue.</li>
-              <li><b>Everything</b> — all of the above as separate sheets + full transaction ledger, in one file.</li>
+          <div className="panel" style={{ marginTop: 20 }}>
+            <h3 style={{ marginTop: 0 }}>What's inside each workbook</h3>
+            <ul className="muted" style={{ lineHeight: 1.8, margin: 0 }}>
+              <li><b style={{ color: '#d6ffe6' }}>Budget</b> — cover page with KPIs, full income &amp; expense statement, and a per-{gran} breakdown.</li>
+              <li><b style={{ color: '#d6ffe6' }}>Profit / Loss</b> — a clean P&amp;L (loss shown negative / on its own line).</li>
+              <li><b style={{ color: '#d6ffe6' }}>Tax / GST</b> — taxable value and the 18% GST component of revenue.</li>
+              <li><b style={{ color: '#d6ffe6' }}>Everything</b> — all sheets above + the full transaction ledger, in one file.</li>
             </ul>
           </div>
         </div>
