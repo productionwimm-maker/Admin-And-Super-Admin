@@ -12,7 +12,7 @@ from . import store
 from .config import settings
 from .permissions import Role
 from .routers import (admins, analytics, audit, auth, catalog, complaints, config,
-                      coverage, customers, finance, notifications, orders,
+                      coverage, customers, finance, finance_reports, notifications, orders,
                       pharmacies, reservations, subscriptions, app_update, poster, surveys)
 from .security import hash_password
 
@@ -32,8 +32,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for r in (auth, pharmacies, orders, reservations, complaints, customers, finance, analytics,
-          catalog, notifications, admins, audit, config, subscriptions, app_update, poster,
+for r in (auth, pharmacies, orders, reservations, complaints, customers, finance, finance_reports,
+          analytics, catalog, notifications, admins, audit, config, subscriptions, app_update, poster,
           coverage, surveys):
     app.include_router(r.router)
 

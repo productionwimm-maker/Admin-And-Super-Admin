@@ -45,4 +45,26 @@ export const api = {
   post: (p, body) => request(p, { method: 'POST', body }),
   put: (p, body) => request(p, { method: 'PUT', body }),
   del: (p) => request(p, { method: 'DELETE' }),
+  download,
+}
+
+// Fetch a file (e.g. an Excel export) with auth and trigger a browser download.
+async function download(path, fallbackName = 'download') {
+  const token = getToken()
+  const res = await fetch(`${BASE}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(text || res.statusText || 'Download failed')
+  }
+  const cd = res.headers.get('Content-Disposition') || ''
+  const m = cd.match(/filename="?([^"]+)"?/)
+  const name = m ? m[1] : fallbackName
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = name
+  document.body.appendChild(a); a.click(); a.remove()
+  URL.revokeObjectURL(url)
 }

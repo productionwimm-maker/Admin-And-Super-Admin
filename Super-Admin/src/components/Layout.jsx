@@ -12,6 +12,7 @@ const NAV = [
   { to: '/customers', label: 'Customers', cap: 'view_customers' },
   { to: '/complaints', label: 'Complaints', cap: 'view_complaints' },
   { section: 'Money' },
+  { to: '/finance', label: 'Finance', cap: 'view_revenue' },
   { to: '/refunds', label: 'Refunds', cap: 'issue_refund' },
   { to: '/salesmen', label: 'Salesmen & Referrals', cap: 'view_salesmen' },
   { to: '/payouts', label: 'Payouts & Earnings', cap: 'view_payouts' },

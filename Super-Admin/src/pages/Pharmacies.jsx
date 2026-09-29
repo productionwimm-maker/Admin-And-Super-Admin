@@ -45,7 +45,7 @@ export default function Pharmacies() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Code</th><th>Pharmacy</th><th>Owner</th><th>State</th><th>Discount</th><th>Status</th><th>Actions</th></tr>
+            <tr><th>Code</th><th>Pharmacy</th><th>Owner</th><th>State</th><th>Discount</th><th>Active</th><th>Status</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {filtered.map((p) => (
@@ -55,6 +55,7 @@ export default function Pharmacies() {
                 <td>{p.ownerName}</td>
                 <td>{p.state}</td>
                 <td>{p.discountPercent}%</td>
+                <td><ActivePill acc={p} /></td>
                 <td><VerifyBadge acc={p} /></td>
                 <td>
                   <div className="row">
@@ -268,5 +269,24 @@ function DocThumbnail({ url, label }) {
       style={{ width: 114, height: 86, objectFit: 'cover', borderRadius: 7, background: '#111' }}
       onError={() => setBroken(true)}
     />
+  )
+}
+
+// Shows whether a pharmacy is currently ACTIVE — an in-force paid subscription
+// or an exempt role (e.g. grandfather). Otherwise Inactive.
+function ActivePill({ acc }) {
+  const sub = acc?.subscription || {}
+  const now = Date.now()
+  const subActive = sub.status === 'active' && (sub.endMillis || 0) > now
+  const exempt = !!acc?.subscriptionRole && acc.subscriptionRole !== 'normal'
+  const active = subActive || exempt
+  return (
+    <span style={{
+      display: 'inline-block', padding: '2px 10px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+      color: active ? '#0E7C66' : '#E03131',
+      background: active ? 'rgba(14,124,102,0.12)' : 'rgba(224,49,49,0.12)',
+    }}>
+      {active ? 'Active' : 'Inactive'}
+    </span>
   )
 }
