@@ -75,7 +75,9 @@ export default function Finance() {
 
   useEffect(() => {
     if (tab !== 'money') return
-    const id = setInterval(loadMoney, 12000)
+    // 60s to keep Firestore reads (full-collection scans) low; refresh sooner by
+    // switching the period dropdown, which reloads immediately.
+    const id = setInterval(loadMoney, 60000)
     return () => clearInterval(id)
     // eslint-disable-next-line
   }, [tab, period, gran])
