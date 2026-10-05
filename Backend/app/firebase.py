@@ -19,10 +19,21 @@ def get_firestore():  # -> google.cloud.firestore.Client | None
     from firebase_admin import credentials, firestore
 
     if not firebase_admin._apps:
+        opts = {
+            "projectId": settings.firebase_project_id,
+            "storageBucket": settings.firebase_storage_bucket,
+        }
         if settings.firebase_service_account.strip():
             cred = credentials.Certificate(json.loads(settings.firebase_service_account))
-            firebase_admin.initialize_app(cred, {"projectId": settings.firebase_project_id})
+            firebase_admin.initialize_app(cred, opts)
         else:
             # Falls back to GOOGLE_APPLICATION_CREDENTIALS / ADC.
-            firebase_admin.initialize_app(options={"projectId": settings.firebase_project_id})
+            firebase_admin.initialize_app(options=opts)
     return firestore.client()
+
+
+def get_bucket():
+    """The Firebase Storage bucket (initialising firebase_admin if needed)."""
+    get_firestore()  # ensures firebase_admin is initialised
+    from firebase_admin import storage
+    return storage.bucket()

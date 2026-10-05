@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     # of these must be set.
     firebase_service_account: str = ""
     firebase_project_id: str = "where-is-my-medicine-3aaaa"
+    firebase_storage_bucket: str = "where-is-my-medicine-3aaaa.firebasestorage.app"
 
     # ── Seed accounts (created on boot if no admins exist) ───────────────────
     # Default login credentials. Change them in production via env vars.

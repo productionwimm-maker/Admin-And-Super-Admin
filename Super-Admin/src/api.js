@@ -46,6 +46,27 @@ export const api = {
   put: (p, body) => request(p, { method: 'PUT', body }),
   del: (p) => request(p, { method: 'DELETE' }),
   download,
+  upload,
+}
+
+// Upload a file via multipart/form-data with auth; returns the parsed JSON.
+async function upload(path, file, field = 'file') {
+  const token = getToken()
+  const form = new FormData()
+  form.append(field, file)
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  })
+  const text = await res.text()
+  let data = null
+  if (text) { try { data = JSON.parse(text) } catch { data = text } }
+  if (!res.ok) {
+    const msg = (data && data.detail) || res.statusText || 'Upload failed'
+    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg))
+  }
+  return data
 }
 
 // Fetch a file (e.g. an Excel export) with auth and trigger a browser download.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
 import Modal from '../components/Modal.jsx'
 import { Loading, ErrorNote, fmtMoney, Badge } from '../components/Helpers.jsx'
@@ -94,9 +94,8 @@ function Subthemes() {
         <Modal title={edit.id ? 'Edit sub-theme' : 'Add sub-theme'} onClose={() => setEdit(null)}>
           <label>Name</label>
           <input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="e.g. Face Wash" />
-          <label>Image URL</label>
-          <input value={edit.imageUrl} onChange={(e) => setEdit({ ...edit, imageUrl: e.target.value })} placeholder="https://…" />
-          <Thumb url={edit.imageUrl} big />
+          <ImageField label="Image (URL or upload from device)"
+            value={edit.imageUrl} onChange={(v) => setEdit({ ...edit, imageUrl: v })} />
           <label>Sort order (lower first)</label>
           <input type="number" value={edit.order} onChange={(e) => setEdit({ ...edit, order: e.target.value })} />
           <label className="row"><input type="checkbox" style={{ width: 'auto' }} checked={!!edit.active}
@@ -200,9 +199,8 @@ function Products() {
           <input value={edit.brand} onChange={(e) => setEdit({ ...edit, brand: e.target.value })} />
           <label>Unit / size (e.g. 100 ml, pack of 3)</label>
           <input value={edit.unit} onChange={(e) => setEdit({ ...edit, unit: e.target.value })} />
-          <label>Image URL</label>
-          <input value={edit.imageUrl} onChange={(e) => setEdit({ ...edit, imageUrl: e.target.value })} placeholder="https://…" />
-          <Thumb url={edit.imageUrl} big />
+          <ImageField label="Image (URL or upload from device)"
+            value={edit.imageUrl} onChange={(v) => setEdit({ ...edit, imageUrl: v })} />
           <label>Short description</label>
           <input value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} />
           <label>What is it about</label>
@@ -325,8 +323,10 @@ function Decks() {
           <label>Button text</label>
           <input value={edit.buttonText} onChange={(e) => setEdit({ ...edit, buttonText: e.target.value })} placeholder="Shop now  →" />
 
-          <label>Background image URL (optional — leave blank to use the gradient below)</label>
-          <input value={edit.imageUrl} onChange={(e) => setEdit({ ...edit, imageUrl: e.target.value })} placeholder="https://… (wide ~16:7)" />
+          <ImageField label="Background image (URL or upload — optional; blank uses the gradient below)"
+            value={edit.imageUrl} onChange={(v) => setEdit({ ...edit, imageUrl: v })} wide />
+          {edit.imageUrl && <button type="button" className="sm" style={{ marginTop: 4 }}
+            onClick={() => setEdit({ ...edit, imageUrl: '' })}>Remove image (use gradient)</button>}
 
           {!edit.imageUrl && (
             <div className="row" style={{ gap: 12, marginTop: 8 }}>
@@ -364,6 +364,40 @@ function Decks() {
           </div>
         </Modal>
       )}
+    </>
+  )
+}
+
+/* ── image field: paste a URL OR upload a device file to Firebase Storage ───── */
+function ImageField({ label, value, onChange, wide }) {
+  const inputRef = useRef(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  async function onFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBusy(true); setErr('')
+    try {
+      const res = await api.upload('/api/wellness/upload', file)
+      onChange(res.url)
+    } catch (ex) { setErr(ex.message) }
+    finally { setBusy(false); if (inputRef.current) inputRef.current.value = '' }
+  }
+
+  return (
+    <>
+      <label>{label}</label>
+      <div className="row" style={{ gap: 8 }}>
+        <input style={{ flex: 1 }} value={value || ''} placeholder="https://… or upload →"
+          onChange={(e) => onChange(e.target.value)} />
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={busy}>
+          {busy ? 'Uploading…' : 'Upload'}
+        </button>
+        <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
+      </div>
+      {err && <ErrorNote error={err} />}
+      <Thumb url={value} wide={wide} big />
     </>
   )
 }

@@ -13,10 +13,13 @@ Three collections power the in-app "Shop":
 Writes here go through the Admin SDK (store), which bypasses the Firestore
 rules that keep these collections read-only for the app.
 """
-from fastapi import APIRouter, Depends, HTTPException
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 
 from .. import audit, store
+from ..firebase import get_bucket
 from ..security import CurrentAdmin, require_superadmin
 
 router = APIRouter(prefix="/api/wellness", tags=["wellness"])
@@ -28,6 +31,45 @@ DECKS = "wellness_decks"
 
 def _final_price(base: float, commission_pct: float) -> int:
     return int(round(float(base) * (1.0 + float(commission_pct) / 100.0)))
+
+
+# ── image upload (local file → Firebase Storage → public URL) ───────────────
+_ALLOWED_IMG = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+_MAX_IMG_BYTES = 8 * 1024 * 1024  # 8 MB
+
+
+@router.post("/upload")
+async def upload_image(file: UploadFile = File(...),
+                       admin: CurrentAdmin = Depends(require_superadmin)):
+    """Upload a device image to Firebase Storage and return its public URL.
+    Used by the Super-Admin for sub-theme / product / deck images."""
+    ctype = (file.content_type or "").lower()
+    if ctype not in _ALLOWED_IMG:
+        raise HTTPException(400, "Only JPG, PNG, WEBP or GIF images are allowed")
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "Empty file")
+    if len(data) > _MAX_IMG_BYTES:
+        raise HTTPException(400, "Image too large (max 8 MB)")
+
+    ext = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif"}[ctype]
+    try:
+        from urllib.parse import quote
+        bucket = get_bucket()
+        token = uuid.uuid4().hex
+        blob = bucket.blob(f"wellness/{uuid.uuid4().hex}.{ext}")
+        # A Firebase download token gives a permanent public link WITHOUT making
+        # the whole bucket public (works with uniform bucket-level access).
+        blob.metadata = {"firebaseStorageDownloadTokens": token}
+        blob.upload_from_string(data, content_type=ctype)
+        url = (
+            f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}"
+            f"/o/{quote(blob.name, safe='')}?alt=media&token={token}"
+        )
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(500, f"Upload failed: {e}")
+    audit.log(admin, "wellness.image.upload", "", {"ctype": ctype, "size": len(data)})
+    return {"url": url}
 
 
 # ── models ────────────────────────────────────────────────────────────────
