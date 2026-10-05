@@ -11,18 +11,35 @@ const TABS = ['Sub-themes', 'Products', 'Decks']
 
 const EMPTY_SUB = {
   name: '', imageUrl: '', order: 0, active: true,
-  color1: '#0A8A80', color2: '#15A39D', textColor: '#FFFFFF', nameSize: 15,
+  color1: '#0A8A80', color2: '#15A39D', textColor: '#FFFFFF', nameSize: 15, imageFit: 'fit',
 }
 const EMPTY_PROD = {
   name: '', subthemeId: '', imageUrl: '', description: '', about: '',
   basePrice: 0, commissionPct: 0, brand: '', unit: '', active: true,
-  color1: '#E7F2EA', color2: '#DFF2EE', textColor: '', accent: '#0A8A80', nameSize: 13,
+  color1: '#E7F2EA', color2: '#DFF2EE', textColor: '', accent: '#0A8A80', nameSize: 13, imageFit: 'fit',
 }
 const EMPTY_DECK = {
   imageUrl: '', title: '', targetType: 'product', targetId: '', order: 0, active: true,
   eyebrow: 'WELLNESS', buttonText: 'Shop now  →', color1: '#0A8A80', color2: '#0E6E66', textColor: '#FFFFFF',
-  headlineSize: 19, eyebrowSize: 9, align: 'start', placement: 'spread', aspect: 2.285, scrim: 55,
+  headlineSize: 19, eyebrowSize: 9, align: 'start', placement: 'spread', aspect: 2.285, scrim: 55, imageFit: 'crop',
 }
+
+// Reusable image-fit <select>.
+function FitSelect({ value, onChange }) {
+  return (
+    <div style={{ flex: 1 }}>
+      <label>Image fit</label>
+      <select value={value || 'fit'} onChange={(e) => onChange(e.target.value)}>
+        <option value="fit">Fit — whole image visible</option>
+        <option value="crop">Fill — crop to fill</option>
+        <option value="stretch">Stretch to fill</option>
+        <option value="width">Fit width</option>
+      </select>
+    </div>
+  )
+}
+const objectFit = (fit) => fit === 'crop' ? 'cover' : fit === 'stretch' ? 'fill' : fit === 'width' ? 'cover' : 'contain'
+const bgSize = (fit) => fit === 'crop' ? 'cover' : fit === 'stretch' ? '100% 100%' : fit === 'width' ? '100% auto' : 'contain'
 
 const finalOf = (base, pct) => Math.round(Number(base || 0) * (1 + Number(pct || 0) / 100))
 
@@ -60,6 +77,7 @@ function Subthemes() {
       name: edit.name, imageUrl: edit.imageUrl, order: Number(edit.order) || 0, active: !!edit.active,
       color1: edit.color1 || '', color2: edit.color2 || '', textColor: edit.textColor || '',
       nameSize: Number(edit.nameSize) || 0,
+      imageFit: edit.imageFit || '',
     }
     try {
       if (edit.id) await api.put(`/api/wellness/subthemes/${edit.id}`, body)
@@ -121,6 +139,8 @@ function Subthemes() {
               <input type="range" min="11" max="26" value={edit.nameSize || 15}
                 onChange={(e) => setEdit({ ...edit, nameSize: Number(e.target.value) })} /></div>
           </div>
+          {edit.imageUrl && <div className="row" style={{ gap: 12 }}>
+            <FitSelect value={edit.imageFit} onChange={(v) => setEdit({ ...edit, imageFit: v })} /></div>}
           <label>Sort order (lower first)</label>
           <input type="number" value={edit.order} onChange={(e) => setEdit({ ...edit, order: e.target.value })} />
           <label className="row"><input type="checkbox" style={{ width: 'auto' }} checked={!!edit.active}
@@ -159,6 +179,7 @@ function Products() {
       brand: edit.brand, unit: edit.unit, active: !!edit.active,
       color1: edit.color1 || '', color2: edit.color2 || '', textColor: edit.textColor || '',
       accent: edit.accent || '', nameSize: Number(edit.nameSize) || 0,
+      imageFit: edit.imageFit || '',
     }
     try {
       if (edit.id) await api.put(`/api/wellness/products/${edit.id}`, body)
@@ -243,6 +264,8 @@ function Products() {
               <input type="range" min="10" max="22" value={edit.nameSize || 13}
                 onChange={(e) => setEdit({ ...edit, nameSize: Number(e.target.value) })} /></div>
           </div>
+          {edit.imageUrl && <div className="row" style={{ gap: 12 }}>
+            <FitSelect value={edit.imageFit} onChange={(v) => setEdit({ ...edit, imageFit: v })} /></div>}
           {!edit.imageUrl && (
             <div className="row" style={{ gap: 12 }}>
               <div><label>No-image gradient start</label>
@@ -317,6 +340,7 @@ function Decks() {
       headlineSize: Number(edit.headlineSize) || 0, eyebrowSize: Number(edit.eyebrowSize) || 0,
       align: edit.align || '', placement: edit.placement || '',
       aspect: Number(edit.aspect) || 0, scrim: edit.scrim === '' || edit.scrim == null ? -1 : Number(edit.scrim),
+      imageFit: edit.imageFit || '',
       template: !!edit.template,
     }
     try {
@@ -438,6 +462,8 @@ function Decks() {
                 onChange={(e) => setEdit({ ...edit, scrim: Number(e.target.value) })} />
             </div>}
           </div>
+          {edit.imageUrl && <div className="row" style={{ gap: 12 }}>
+            <FitSelect value={edit.imageFit} onChange={(v) => setEdit({ ...edit, imageFit: v })} /></div>}
 
           <label style={{ marginTop: 12 }}>Opens</label>
           <select value={edit.targetType}
@@ -508,7 +534,11 @@ function SubthemePreview({ s }) {
   const c1 = s.color1 || '#0A8A80', c2 = s.color2 || '#15A39D'
   const text = s.textColor || '#FFFFFF'
   const bg = hasImage
-    ? { backgroundImage: `linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.62)), url(${s.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    ? {
+        backgroundImage: `linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.62)), url(${s.imageUrl})`,
+        backgroundSize: `100% 100%, ${bgSize(s.imageFit)}`, backgroundRepeat: 'no-repeat, no-repeat',
+        backgroundPosition: 'center, center', backgroundColor: c1,
+      }
     : { backgroundImage: `linear-gradient(135deg, ${c1}, ${c2})` }
   return (
     <div style={{
@@ -540,7 +570,11 @@ function DeckPreview({ deck }) {
     : placement === 'center' ? 'center' : 'space-between'
   const s1 = (scrim * 0.4 / 100).toFixed(2), s2 = (Math.min(scrim * 1.1, 95) / 100).toFixed(2)
   const bg = hasImage
-    ? { backgroundImage: `linear-gradient(rgba(0,0,0,${s1}),rgba(0,0,0,${s2})), url(${deck.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    ? {
+        backgroundImage: `linear-gradient(rgba(0,0,0,${s1}),rgba(0,0,0,${s2})), url(${deck.imageUrl})`,
+        backgroundSize: `100% 100%, ${bgSize(deck.imageFit)}`, backgroundRepeat: 'no-repeat, no-repeat',
+        backgroundPosition: 'center, center', backgroundColor: c1,
+      }
     : { backgroundImage: `linear-gradient(135deg, ${c1}, ${c2})` }
   const gap = justify === 'space-between' ? 0 : 8
   return (

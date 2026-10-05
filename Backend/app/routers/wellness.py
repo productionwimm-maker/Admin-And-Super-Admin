@@ -83,6 +83,7 @@ class SubthemeBody(BaseModel):
     color2: str = ""
     textColor: str = ""
     nameSize: int = 0
+    imageFit: str = ""
 
 
 class ProductBody(BaseModel):
@@ -103,6 +104,7 @@ class ProductBody(BaseModel):
     textColor: str = ""      # product name color
     accent: str = ""         # price color
     nameSize: int = 0
+    imageFit: str = ""
 
 
 class DeckBody(BaseModel):
@@ -124,6 +126,7 @@ class DeckBody(BaseModel):
     placement: str = ""           # "top" | "center" | "bottom" | "spread"
     aspect: float = 0.0           # width/height ratio; 0 = default 16/7
     scrim: int = -1               # image overlay darkness 0..100; -1 = default
+    imageFit: str = ""
     template: bool = False
 
 
