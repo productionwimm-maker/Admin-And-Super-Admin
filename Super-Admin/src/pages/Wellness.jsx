@@ -17,6 +17,7 @@ const EMPTY_PROD = {
 const EMPTY_DECK = {
   imageUrl: '', title: '', targetType: 'product', targetId: '', order: 0, active: true,
   eyebrow: 'WELLNESS', buttonText: 'Shop now  →', color1: '#0A8A80', color2: '#0E6E66', textColor: '#FFFFFF',
+  headlineSize: 19, eyebrowSize: 9, align: 'start', placement: 'spread', aspect: 2.285, scrim: 55,
 }
 
 const finalOf = (base, pct) => Math.round(Number(base || 0) * (1 + Number(pct || 0) / 100))
@@ -268,6 +269,9 @@ function Decks() {
       targetId: edit.targetId, order: Number(edit.order) || 0, active: !!edit.active,
       eyebrow: edit.eyebrow || '', buttonText: edit.buttonText || '',
       color1: edit.color1 || '', color2: edit.color2 || '', textColor: edit.textColor || '',
+      headlineSize: Number(edit.headlineSize) || 0, eyebrowSize: Number(edit.eyebrowSize) || 0,
+      align: edit.align || '', placement: edit.placement || '',
+      aspect: Number(edit.aspect) || 0, scrim: edit.scrim === '' || edit.scrim == null ? -1 : Number(edit.scrim),
       template: !!edit.template,
     }
     try {
@@ -338,6 +342,57 @@ function Decks() {
                 <input type="color" value={edit.textColor || '#FFFFFF'} onChange={(e) => setEdit({ ...edit, textColor: e.target.value })} /></div>
             </div>
           )}
+
+          {/* ── Customize: size, placement, alignment ── */}
+          <div className="row" style={{ gap: 12, marginTop: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label>Headline size ({edit.headlineSize || 19})</label>
+              <input type="range" min="12" max="34" value={edit.headlineSize || 19}
+                onChange={(e) => setEdit({ ...edit, headlineSize: Number(e.target.value) })} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label>Eyebrow size ({edit.eyebrowSize || 9})</label>
+              <input type="range" min="7" max="16" value={edit.eyebrowSize || 9}
+                onChange={(e) => setEdit({ ...edit, eyebrowSize: Number(e.target.value) })} />
+            </div>
+          </div>
+          <div className="row" style={{ gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label>Text alignment</label>
+              <select value={edit.align || 'start'} onChange={(e) => setEdit({ ...edit, align: e.target.value })}>
+                <option value="start">Left</option>
+                <option value="center">Center</option>
+                <option value="end">Right</option>
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label>Content placement</label>
+              <select value={edit.placement || 'spread'} onChange={(e) => setEdit({ ...edit, placement: e.target.value })}>
+                <option value="spread">Spread (top→bottom)</option>
+                <option value="top">Top</option>
+                <option value="center">Center</option>
+                <option value="bottom">Bottom</option>
+              </select>
+            </div>
+          </div>
+          <div className="row" style={{ gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label>Card shape (size)</label>
+              <select value={String(edit.aspect || 2.285)}
+                onChange={(e) => setEdit({ ...edit, aspect: Number(e.target.value) })}>
+                <option value="2.285">Wide banner (16:7)</option>
+                <option value="1.777">Banner (16:9)</option>
+                <option value="1.5">Short (3:2)</option>
+                <option value="1.2">Tall (6:5)</option>
+                <option value="1">Square (1:1)</option>
+              </select>
+            </div>
+            {edit.imageUrl && <div style={{ flex: 1 }}>
+              <label>Image darkening ({edit.scrim ?? 55}%)</label>
+              <input type="range" min="0" max="100" value={edit.scrim ?? 55}
+                onChange={(e) => setEdit({ ...edit, scrim: Number(e.target.value) })} />
+            </div>}
+          </div>
 
           <label style={{ marginTop: 12 }}>Opens</label>
           <select value={edit.targetType}
@@ -410,19 +465,33 @@ function DeckPreview({ deck }) {
   const text = deck.textColor || '#FFFFFF'
   const eyebrow = deck.eyebrow || (hasImage ? '' : 'WELLNESS')
   const button = deck.buttonText || 'Shop now  →'
+  const hSize = Number(deck.headlineSize) || 19
+  const eSize = Number(deck.eyebrowSize) || 9
+  const aspect = Number(deck.aspect) || 2.285
+  const scrim = deck.scrim == null ? 55 : Number(deck.scrim)
+  const align = deck.align || 'start'
+  const placement = deck.placement || 'spread'
+  const items = align === 'center' ? 'center' : align === 'end' ? 'flex-end' : 'flex-start'
+  const textAlign = align === 'center' ? 'center' : align === 'end' ? 'right' : 'left'
+  const justify = placement === 'top' ? 'flex-start' : placement === 'bottom' ? 'flex-end'
+    : placement === 'center' ? 'center' : 'space-between'
+  const s1 = (scrim * 0.4 / 100).toFixed(2), s2 = (Math.min(scrim * 1.1, 95) / 100).toFixed(2)
   const bg = hasImage
-    ? { backgroundImage: `linear-gradient(rgba(0,0,0,.2),rgba(0,0,0,.67)), url(${deck.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    ? { backgroundImage: `linear-gradient(rgba(0,0,0,${s1}),rgba(0,0,0,${s2})), url(${deck.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : { backgroundImage: `linear-gradient(135deg, ${c1}, ${c2})` }
+  const gap = justify === 'space-between' ? 0 : 8
   return (
     <div style={{
-      width: '100%', aspectRatio: '16 / 7', borderRadius: 16, overflow: 'hidden',
-      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+      width: '100%', aspectRatio: String(aspect), borderRadius: 16, overflow: 'hidden',
+      display: 'flex', flexDirection: 'column', justifyContent: justify, alignItems: items, gap,
       padding: 16, marginBottom: 12, boxSizing: 'border-box', ...bg,
     }}>
-      <div style={{ color: text, opacity: 0.78, fontSize: 9, fontWeight: 700, letterSpacing: 1.6 }}>{eyebrow}</div>
-      <div style={{ color: text, fontSize: 19, fontWeight: 800, lineHeight: 1.15, maxWidth: '82%' }}>{deck.title || 'Headline'}</div>
+      {eyebrow
+        ? <div style={{ color: text, opacity: 0.78, fontSize: eSize, fontWeight: 700, letterSpacing: 1.6, textAlign }}>{eyebrow}</div>
+        : <div />}
+      <div style={{ color: text, fontSize: hSize, fontWeight: 800, lineHeight: 1.15, maxWidth: '90%', textAlign }}>{deck.title || 'Headline'}</div>
       {button
-        ? <div style={{ alignSelf: 'flex-start', color: text, background: 'rgba(255,255,255,.18)', borderRadius: 50, padding: '6px 12px', fontSize: 11, fontWeight: 700 }}>{button}</div>
+        ? <div style={{ color: text, background: 'rgba(255,255,255,.18)', borderRadius: 50, padding: '6px 12px', fontSize: 11, fontWeight: 700 }}>{button}</div>
         : <div />}
     </div>
   )

@@ -101,12 +101,18 @@ class DeckBody(BaseModel):
     targetId: str = ""
     order: int = 0
     active: bool = True
-    # Fully editable card design (blank = sensible default in the app).
+    # Fully editable card design (blank/0 = sensible default in the app).
     eyebrow: str = ""             # small label above the headline
     buttonText: str = ""          # pill text, e.g. "Shop now  →"
     color1: str = ""              # gradient start hex (#RRGGBB)
     color2: str = ""              # gradient end hex
     textColor: str = ""           # text/overlay color hex
+    headlineSize: int = 0         # headline font size (sp); 0 = default
+    eyebrowSize: int = 0          # eyebrow font size (sp); 0 = default
+    align: str = ""               # "start" | "center" | "end"
+    placement: str = ""           # "top" | "center" | "bottom" | "spread"
+    aspect: float = 0.0           # width/height ratio; 0 = default 16/7
+    scrim: int = -1               # image overlay darkness 0..100; -1 = default
     template: bool = False
 
 
