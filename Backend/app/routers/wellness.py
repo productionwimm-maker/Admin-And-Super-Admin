@@ -53,12 +53,19 @@ class ProductBody(BaseModel):
 
 
 class DeckBody(BaseModel):
-    imageUrl: str
+    imageUrl: str = ""
     title: str = ""
-    targetType: str = "product"   # "product" | "subtheme"
+    targetType: str = "product"   # "product" | "subtheme" | "shop"
     targetId: str = ""
     order: int = 0
     active: bool = True
+    # Fully editable card design (blank = sensible default in the app).
+    eyebrow: str = ""             # small label above the headline
+    buttonText: str = ""          # pill text, e.g. "Shop now  →"
+    color1: str = ""              # gradient start hex (#RRGGBB)
+    color2: str = ""              # gradient end hex
+    textColor: str = ""           # text/overlay color hex
+    template: bool = False
 
 
 # ── sub-themes ──────────────────────────────────────────────────────────────

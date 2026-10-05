@@ -14,7 +14,10 @@ const EMPTY_PROD = {
   name: '', subthemeId: '', imageUrl: '', description: '', about: '',
   basePrice: 0, commissionPct: 0, brand: '', unit: '', active: true,
 }
-const EMPTY_DECK = { imageUrl: '', title: '', targetType: 'product', targetId: '', order: 0, active: true }
+const EMPTY_DECK = {
+  imageUrl: '', title: '', targetType: 'product', targetId: '', order: 0, active: true,
+  eyebrow: 'WELLNESS', buttonText: 'Shop now  →', color1: '#0A8A80', color2: '#0E6E66', textColor: '#FFFFFF',
+}
 
 const finalOf = (base, pct) => Math.round(Number(base || 0) * (1 + Number(pct || 0) / 100))
 
@@ -265,6 +268,9 @@ function Decks() {
     const body = {
       imageUrl: edit.imageUrl, title: edit.title, targetType: edit.targetType,
       targetId: edit.targetId, order: Number(edit.order) || 0, active: !!edit.active,
+      eyebrow: edit.eyebrow || '', buttonText: edit.buttonText || '',
+      color1: edit.color1 || '', color2: edit.color2 || '', textColor: edit.textColor || '',
+      template: !!edit.template,
     }
     try {
       if (edit.id) await api.put(`/api/wellness/decks/${edit.id}`, body)
@@ -308,33 +314,83 @@ function Decks() {
         </table>
       </div>
       {edit && (
-        <Modal title={edit.id ? 'Edit slide' : 'Add slide'} onClose={() => setEdit(null)}>
-          <label>Banner image URL (wide, ~16:7)</label>
-          <input value={edit.imageUrl} onChange={(e) => setEdit({ ...edit, imageUrl: e.target.value })} placeholder="https://…" />
-          <Thumb url={edit.imageUrl} wide big />
-          <label>Title (optional overlay)</label>
-          <input value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} />
-          <label>Opens</label>
+        <Modal title={edit.id ? 'Edit card' : 'Add card'} onClose={() => setEdit(null)}>
+          {/* Live preview — what the card looks like in the app (16:7). */}
+          <DeckPreview deck={edit} />
+
+          <label>Headline (big text)</label>
+          <input value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} placeholder="e.g. Everyday skin care" />
+          <label>Eyebrow (small label above)</label>
+          <input value={edit.eyebrow} onChange={(e) => setEdit({ ...edit, eyebrow: e.target.value })} placeholder="WELLNESS" />
+          <label>Button text</label>
+          <input value={edit.buttonText} onChange={(e) => setEdit({ ...edit, buttonText: e.target.value })} placeholder="Shop now  →" />
+
+          <label>Background image URL (optional — leave blank to use the gradient below)</label>
+          <input value={edit.imageUrl} onChange={(e) => setEdit({ ...edit, imageUrl: e.target.value })} placeholder="https://… (wide ~16:7)" />
+
+          {!edit.imageUrl && (
+            <div className="row" style={{ gap: 12, marginTop: 8 }}>
+              <div><label>Gradient start</label>
+                <input type="color" value={edit.color1 || '#0A8A80'} onChange={(e) => setEdit({ ...edit, color1: e.target.value })} /></div>
+              <div><label>Gradient end</label>
+                <input type="color" value={edit.color2 || '#0E6E66'} onChange={(e) => setEdit({ ...edit, color2: e.target.value })} /></div>
+              <div><label>Text color</label>
+                <input type="color" value={edit.textColor || '#FFFFFF'} onChange={(e) => setEdit({ ...edit, textColor: e.target.value })} /></div>
+            </div>
+          )}
+
+          <label style={{ marginTop: 12 }}>Opens</label>
           <select value={edit.targetType}
             onChange={(e) => setEdit({ ...edit, targetType: e.target.value, targetId: '' })}>
             <option value="product">A product</option>
             <option value="subtheme">A sub-theme</option>
+            <option value="shop">The Wellness shop</option>
           </select>
-          <select value={edit.targetId} onChange={(e) => setEdit({ ...edit, targetId: e.target.value })}>
-            <option value="">Select…</option>
-            {targetList.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-          </select>
+          {edit.targetType !== 'shop' && (
+            <select value={edit.targetId} onChange={(e) => setEdit({ ...edit, targetId: e.target.value })}>
+              <option value="">Select…</option>
+              {targetList.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+          )}
           <label>Sort order (lower first)</label>
           <input type="number" value={edit.order} onChange={(e) => setEdit({ ...edit, order: e.target.value })} />
           <label className="row"><input type="checkbox" style={{ width: 'auto' }} checked={!!edit.active}
             onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> Live</label>
           <ErrorNote error={err} />
           <div className="row" style={{ marginTop: 14 }}>
-            <button className="primary" disabled={busy || !edit.imageUrl || !edit.targetId} onClick={save}>Save</button>
+            <button className="primary"
+              disabled={busy || !edit.title || (edit.targetType !== 'shop' && !edit.targetId)}
+              onClick={save}>Save</button>
           </div>
         </Modal>
       )}
     </>
+  )
+}
+
+/* ── live card preview (mirrors the app's DeckCard) ─────────────────────────── */
+function DeckPreview({ deck }) {
+  const hasImage = !!deck.imageUrl
+  const c1 = deck.color1 || '#0A8A80'
+  const c2 = deck.color2 || '#0E6E66'
+  const text = deck.textColor || '#FFFFFF'
+  const eyebrow = deck.eyebrow || (hasImage ? '' : 'WELLNESS')
+  const button = deck.buttonText || 'Shop now  →'
+  const bg = hasImage
+    ? { backgroundImage: `linear-gradient(rgba(0,0,0,.2),rgba(0,0,0,.67)), url(${deck.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : { backgroundImage: `linear-gradient(135deg, ${c1}, ${c2})` }
+  return (
+    <div style={{
+      width: '100%', aspectRatio: '16 / 7', borderRadius: 16, overflow: 'hidden',
+      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+      padding: 16, marginBottom: 12, boxSizing: 'border-box', ...bg,
+    }}>
+      <div style={{ color: text, opacity: 0.78, fontSize: 9, fontWeight: 700, letterSpacing: 1.6 }}>{eyebrow}</div>
+      <div style={{ color: text, fontSize: 19, fontWeight: 800, lineHeight: 1.15, maxWidth: '82%' }}>{deck.title || 'Headline'}</div>
+      {button
+        ? <div style={{ alignSelf: 'flex-start', color: text, background: 'rgba(255,255,255,.18)', borderRadius: 50, padding: '6px 12px', fontSize: 11, fontWeight: 700 }}>{button}</div>
+        : <div />}
+    </div>
   )
 }
 
