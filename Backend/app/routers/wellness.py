@@ -78,6 +78,11 @@ class SubthemeBody(BaseModel):
     imageUrl: str = ""
     order: int = 0
     active: bool = True
+    # Customizable look
+    color1: str = ""
+    color2: str = ""
+    textColor: str = ""
+    nameSize: int = 0
 
 
 class ProductBody(BaseModel):
@@ -92,6 +97,12 @@ class ProductBody(BaseModel):
     brand: str = ""
     unit: str = ""           # e.g. "100 ml", "pack of 3"
     active: bool = True
+    # Customizable look
+    color1: str = ""         # image-area gradient start (used when no image)
+    color2: str = ""         # image-area gradient end
+    textColor: str = ""      # product name color
+    accent: str = ""         # price color
+    nameSize: int = 0
 
 
 class DeckBody(BaseModel):

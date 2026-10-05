@@ -9,10 +9,14 @@ import { Loading, ErrorNote, fmtMoney, Badge } from '../components/Helpers.jsx'
 
 const TABS = ['Sub-themes', 'Products', 'Decks']
 
-const EMPTY_SUB = { name: '', imageUrl: '', order: 0, active: true }
+const EMPTY_SUB = {
+  name: '', imageUrl: '', order: 0, active: true,
+  color1: '#0A8A80', color2: '#15A39D', textColor: '#FFFFFF', nameSize: 15,
+}
 const EMPTY_PROD = {
   name: '', subthemeId: '', imageUrl: '', description: '', about: '',
   basePrice: 0, commissionPct: 0, brand: '', unit: '', active: true,
+  color1: '#E7F2EA', color2: '#DFF2EE', textColor: '', accent: '#0A8A80', nameSize: 13,
 }
 const EMPTY_DECK = {
   imageUrl: '', title: '', targetType: 'product', targetId: '', order: 0, active: true,
@@ -52,7 +56,11 @@ function Subthemes() {
 
   async function save() {
     setBusy(true); setErr('')
-    const body = { name: edit.name, imageUrl: edit.imageUrl, order: Number(edit.order) || 0, active: !!edit.active }
+    const body = {
+      name: edit.name, imageUrl: edit.imageUrl, order: Number(edit.order) || 0, active: !!edit.active,
+      color1: edit.color1 || '', color2: edit.color2 || '', textColor: edit.textColor || '',
+      nameSize: Number(edit.nameSize) || 0,
+    }
     try {
       if (edit.id) await api.put(`/api/wellness/subthemes/${edit.id}`, body)
       else await api.post('/api/wellness/subthemes', body)
@@ -93,10 +101,26 @@ function Subthemes() {
       </div>
       {edit && (
         <Modal title={edit.id ? 'Edit sub-theme' : 'Add sub-theme'} onClose={() => setEdit(null)}>
+          <SubthemePreview s={edit} />
           <label>Name</label>
           <input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="e.g. Face Wash" />
-          <ImageField label="Image (URL or upload from device)"
+          <ImageField label="Image (URL or upload — blank uses the gradient below)"
             value={edit.imageUrl} onChange={(v) => setEdit({ ...edit, imageUrl: v })} />
+          {!edit.imageUrl && (
+            <div className="row" style={{ gap: 12 }}>
+              <div><label>Gradient start</label>
+                <input type="color" value={edit.color1 || '#0A8A80'} onChange={(e) => setEdit({ ...edit, color1: e.target.value })} /></div>
+              <div><label>Gradient end</label>
+                <input type="color" value={edit.color2 || '#15A39D'} onChange={(e) => setEdit({ ...edit, color2: e.target.value })} /></div>
+            </div>
+          )}
+          <div className="row" style={{ gap: 12 }}>
+            <div><label>Name color</label>
+              <input type="color" value={edit.textColor || '#FFFFFF'} onChange={(e) => setEdit({ ...edit, textColor: e.target.value })} /></div>
+            <div style={{ flex: 1 }}><label>Name size ({edit.nameSize || 15})</label>
+              <input type="range" min="11" max="26" value={edit.nameSize || 15}
+                onChange={(e) => setEdit({ ...edit, nameSize: Number(e.target.value) })} /></div>
+          </div>
           <label>Sort order (lower first)</label>
           <input type="number" value={edit.order} onChange={(e) => setEdit({ ...edit, order: e.target.value })} />
           <label className="row"><input type="checkbox" style={{ width: 'auto' }} checked={!!edit.active}
@@ -133,6 +157,8 @@ function Products() {
       description: edit.description, about: edit.about,
       basePrice: Number(edit.basePrice) || 0, commissionPct: Number(edit.commissionPct) || 0,
       brand: edit.brand, unit: edit.unit, active: !!edit.active,
+      color1: edit.color1 || '', color2: edit.color2 || '', textColor: edit.textColor || '',
+      accent: edit.accent || '', nameSize: Number(edit.nameSize) || 0,
     }
     try {
       if (edit.id) await api.put(`/api/wellness/products/${edit.id}`, body)
@@ -206,6 +232,25 @@ function Products() {
           <input value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} />
           <label>What is it about</label>
           <textarea rows={3} value={edit.about} onChange={(e) => setEdit({ ...edit, about: e.target.value })} />
+
+          {/* ── Card look ── */}
+          <div className="row" style={{ gap: 12, marginTop: 8 }}>
+            <div><label>Name color</label>
+              <input type="color" value={edit.textColor || '#112F33'} onChange={(e) => setEdit({ ...edit, textColor: e.target.value })} /></div>
+            <div><label>Price color</label>
+              <input type="color" value={edit.accent || '#0A8A80'} onChange={(e) => setEdit({ ...edit, accent: e.target.value })} /></div>
+            <div style={{ flex: 1 }}><label>Name size ({edit.nameSize || 13})</label>
+              <input type="range" min="10" max="22" value={edit.nameSize || 13}
+                onChange={(e) => setEdit({ ...edit, nameSize: Number(e.target.value) })} /></div>
+          </div>
+          {!edit.imageUrl && (
+            <div className="row" style={{ gap: 12 }}>
+              <div><label>No-image gradient start</label>
+                <input type="color" value={edit.color1 || '#E7F2EA'} onChange={(e) => setEdit({ ...edit, color1: e.target.value })} /></div>
+              <div><label>No-image gradient end</label>
+                <input type="color" value={edit.color2 || '#DFF2EE'} onChange={(e) => setEdit({ ...edit, color2: e.target.value })} /></div>
+            </div>
+          )}
           <div className="row" style={{ gap: 12 }}>
             <div style={{ flex: 1 }}>
               <label>Base price ₹ (pharmacy is paid)</label>
@@ -454,6 +499,24 @@ function ImageField({ label, value, onChange, wide }) {
       {err && <ErrorNote error={err} />}
       <Thumb url={value} wide={wide} big />
     </>
+  )
+}
+
+/* ── sub-theme card preview (mirrors the app) ───────────────────────────────── */
+function SubthemePreview({ s }) {
+  const hasImage = !!s.imageUrl
+  const c1 = s.color1 || '#0A8A80', c2 = s.color2 || '#15A39D'
+  const text = s.textColor || '#FFFFFF'
+  const bg = hasImage
+    ? { backgroundImage: `linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.62)), url(${s.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : { backgroundImage: `linear-gradient(135deg, ${c1}, ${c2})` }
+  return (
+    <div style={{
+      width: 180, aspectRatio: '1 / 1.25', borderRadius: 16, overflow: 'hidden',
+      display: 'flex', alignItems: 'flex-end', padding: 12, marginBottom: 12, boxSizing: 'border-box', ...bg,
+    }}>
+      <div style={{ color: text, fontSize: Number(s.nameSize) || 15, fontWeight: 800 }}>{s.name || 'Sub-theme'}</div>
+    </div>
   )
 }
 
