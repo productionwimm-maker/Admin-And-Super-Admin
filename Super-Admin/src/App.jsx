@@ -26,6 +26,7 @@ import Subscriptions from './pages/Subscriptions.jsx'
 import AppSettings from './pages/AppSettings.jsx'
 import Finance from './pages/Finance.jsx'
 import Wellness from './pages/Wellness.jsx'
+import LocationRequests from './pages/LocationRequests.jsx'
 
 function Protected({ children }) {
   const { user, loading } = useAuth()
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="app-settings" element={<AppSettings />} />
         <Route path="finance" element={<Finance />} />
         <Route path="wellness" element={<Wellness />} />
+        <Route path="location-requests" element={<LocationRequests />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

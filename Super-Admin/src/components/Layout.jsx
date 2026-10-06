@@ -21,6 +21,7 @@ const NAV = [
   { to: '/analytics', label: 'Analytics', cap: 'view_analytics' },
   { to: '/catalog', label: 'Medicine Catalog', cap: 'edit_catalog' },
   { to: '/wellness', label: 'Wellness Shop', cap: null },
+  { to: '/location-requests', label: 'Location Requests', cap: null },
   { to: '/notifications', label: 'Broadcasts', cap: 'broadcast_draft' },
   { to: '/admins', label: 'Admin Accounts', cap: 'manage_admins' },
   { to: '/settings', label: 'Feature Flags', cap: 'feature_flags' },
