@@ -10,12 +10,12 @@ import { Loading, ErrorNote, fmtMoney, Badge } from '../components/Helpers.jsx'
 const TABS = ['Sub-themes', 'Products', 'Decks']
 
 const EMPTY_SUB = {
-  name: '', imageUrl: '', order: 0, active: true,
+  name: '', imageUrl: '', order: 0, active: true, comingSoon: false,
   color1: '#0A8A80', color2: '#15A39D', textColor: '#FFFFFF', nameSize: 15, imageFit: 'fit',
 }
 const EMPTY_PROD = {
   name: '', subthemeId: '', imageUrl: '', description: '', about: '',
-  basePrice: 0, commissionPct: 0, brand: '', unit: '', active: true,
+  basePrice: 0, commissionPct: 0, brand: '', unit: '', active: true, comingSoon: false,
   color1: '#E7F2EA', color2: '#DFF2EE', textColor: '', accent: '#0A8A80', nameSize: 13, imageFit: 'fit',
 }
 const EMPTY_DECK = {
@@ -75,6 +75,7 @@ function Subthemes() {
     setBusy(true); setErr('')
     const body = {
       name: edit.name, imageUrl: edit.imageUrl, order: Number(edit.order) || 0, active: !!edit.active,
+      comingSoon: !!edit.comingSoon,
       color1: edit.color1 || '', color2: edit.color2 || '', textColor: edit.textColor || '',
       nameSize: Number(edit.nameSize) || 0,
       imageFit: edit.imageFit || '',
@@ -107,7 +108,7 @@ function Subthemes() {
                 <td><Thumb url={s.imageUrl} /></td>
                 <td>{s.name}</td>
                 <td>{s.order}</td>
-                <td>{s.active ? <Badge kind="green">Active</Badge> : <Badge kind="grey">Hidden</Badge>}</td>
+                <td>{s.active ? <Badge kind="green">Active</Badge> : <Badge kind="grey">Hidden</Badge>}{s.comingSoon ? <Badge kind="grey">Coming soon</Badge> : null}</td>
                 <td><div className="row">
                   <button className="sm" onClick={() => setEdit({ ...s })}>Edit</button>
                   <button className="sm red" onClick={() => remove(s.id)}>Delete</button>
@@ -145,6 +146,8 @@ function Subthemes() {
           <input type="number" value={edit.order} onChange={(e) => setEdit({ ...edit, order: e.target.value })} />
           <label className="row"><input type="checkbox" style={{ width: 'auto' }} checked={!!edit.active}
             onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> Active (visible in app)</label>
+          <label className="row"><input type="checkbox" style={{ width: 'auto' }} checked={!!edit.comingSoon}
+            onChange={(e) => setEdit({ ...edit, comingSoon: e.target.checked })} /> Coming soon (shown but locked — customers can't open it yet)</label>
           <ErrorNote error={err} />
           <div className="row" style={{ marginTop: 14 }}>
             <button className="primary" disabled={busy || !edit.name} onClick={save}>Save</button>
@@ -177,6 +180,7 @@ function Products() {
       description: edit.description, about: edit.about,
       basePrice: Number(edit.basePrice) || 0, commissionPct: Number(edit.commissionPct) || 0,
       brand: edit.brand, unit: edit.unit, active: !!edit.active,
+      comingSoon: !!edit.comingSoon,
       color1: edit.color1 || '', color2: edit.color2 || '', textColor: edit.textColor || '',
       accent: edit.accent || '', nameSize: Number(edit.nameSize) || 0,
       imageFit: edit.imageFit || '',
@@ -225,7 +229,7 @@ function Products() {
                 <td>{fmtMoney(p.basePrice)}</td>
                 <td>{p.commissionPct}%</td>
                 <td><b>{fmtMoney(p.finalPrice)}</b></td>
-                <td>{p.active ? <Badge kind="green">Active</Badge> : <Badge kind="grey">Hidden</Badge>}</td>
+                <td>{p.active ? <Badge kind="green">Active</Badge> : <Badge kind="grey">Hidden</Badge>}{p.comingSoon ? <Badge kind="grey">Coming soon</Badge> : null}</td>
                 <td><div className="row">
                   <button className="sm" onClick={() => setEdit({ ...p })}>Edit</button>
                   <button className="sm red" onClick={() => remove(p.id)}>Delete</button>
@@ -299,6 +303,8 @@ function Products() {
           </div>
           <label className="row" style={{ marginTop: 12 }}><input type="checkbox" style={{ width: 'auto' }}
             checked={!!edit.active} onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> Active (visible in app)</label>
+          <label className="row"><input type="checkbox" style={{ width: 'auto' }}
+            checked={!!edit.comingSoon} onChange={(e) => setEdit({ ...edit, comingSoon: e.target.checked })} /> Coming soon (shown but locked — customers can't open it yet)</label>
           <ErrorNote error={err} />
           <div className="row" style={{ marginTop: 14 }}>
             <button className="primary" disabled={busy || !edit.name || !edit.subthemeId} onClick={save}>Save</button>

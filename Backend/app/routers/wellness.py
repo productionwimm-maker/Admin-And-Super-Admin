@@ -78,6 +78,8 @@ class SubthemeBody(BaseModel):
     imageUrl: str = ""
     order: int = 0
     active: bool = True
+    # Shown in the app but locked ("Coming soon") until toggled off.
+    comingSoon: bool = False
     # Customizable look
     color1: str = ""
     color2: str = ""
@@ -98,6 +100,8 @@ class ProductBody(BaseModel):
     brand: str = ""
     unit: str = ""           # e.g. "100 ml", "pack of 3"
     active: bool = True
+    # Shown in the app but locked ("Coming soon") until toggled off.
+    comingSoon: bool = False
     # Customizable look
     color1: str = ""         # image-area gradient start (used when no image)
     color2: str = ""         # image-area gradient end
