@@ -14,7 +14,7 @@ from .permissions import Role
 from .routers import (admins, analytics, audit, auth, catalog, complaints, config,
                       coverage, customers, finance, finance_reports, notifications, orders,
                       pharmacies, reservations, subscriptions, app_update, poster, surveys,
-                      wellness, location_requests)
+                      wellness, location_requests, analytics_access)
 from .security import hash_password
 
 log = logging.getLogger("wimm.admin")
@@ -35,7 +35,7 @@ app.add_middleware(
 
 for r in (auth, pharmacies, orders, reservations, complaints, customers, finance, finance_reports,
           analytics, catalog, notifications, admins, audit, config, subscriptions, app_update, poster,
-          coverage, surveys, wellness, location_requests):
+          coverage, surveys, wellness, location_requests, analytics_access):
     app.include_router(r.router)
 
 
