@@ -14,9 +14,10 @@ const PERIODS = [
   { v: 'day', label: 'Today' },
   { v: 'week', label: 'This week' },
   { v: 'month', label: 'This month' },
+  { v: 'quarter', label: 'This quarter' },
   { v: 'fy', label: 'This FY' },
 ]
-const GRANS = ['hour', 'day', 'week', 'month', 'fy']
+const GRANS = ['hour', 'day', 'week', 'month', 'quarter', 'fy']
 
 // Palette tuned for the dark-green theme.
 const PIE_COLORS = ['#00c853', '#26c6da', '#f1c40f', '#ff8a65', '#ba68c8']

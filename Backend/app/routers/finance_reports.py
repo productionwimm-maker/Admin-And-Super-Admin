@@ -59,6 +59,10 @@ def _parse_window(period: Optional[str], frm: Optional[int], to: Optional[int]) 
     elif p == "week":
         d = now.replace(hour=0, minute=0, second=0, microsecond=0)
         start = d - timedelta(days=d.weekday())
+    elif p == "quarter":
+        # Calendar quarter containing today (Jan-Mar, Apr-Jun, Jul-Sep, Oct-Dec).
+        q_start_month = ((now.month - 1) // 3) * 3 + 1
+        start = datetime(now.year, q_start_month, 1, tzinfo=IST)
     elif p == "year" or p == "fy":
         # Indian FY starts 1 Apr.
         y = now.year if now.month >= 4 else now.year - 1
@@ -111,6 +115,9 @@ def _bucket_key(ms: int, granularity: str) -> str:
         return d.strftime("W%Y-%m-%d")
     if g == "month":
         return dt.strftime("%Y-%m")
+    if g == "quarter":
+        q = (dt.month - 1) // 3 + 1
+        return f"{dt.year}-Q{q}"
     if g in ("year", "fy"):
         y = dt.year if dt.month >= 4 else dt.year - 1
         return f"FY{y}-{str(y + 1)[2:]}"
@@ -172,7 +179,7 @@ def timeseries(granularity: str = "day", period: Optional[str] = None,
                admin: CurrentAdmin = Depends(require_superadmin)):
     # Default window scales with granularity when none is given.
     if frm is None and to is None and period is None:
-        period = {"hour": "day", "day": "month", "week": "year", "month": "fy", "fy": "fy"}.get(granularity, "month")
+        period = {"hour": "day", "day": "month", "week": "year", "month": "fy", "quarter": "fy", "fy": "fy"}.get(granularity, "month")
     a, b = _parse_window(period, frm, to)
     return {"granularity": granularity, "points": _timeseries(_rows(a, b), granularity)}
 
