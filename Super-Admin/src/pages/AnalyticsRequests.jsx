@@ -76,7 +76,7 @@ export default function AnalyticsRequests() {
                       {!r.approved
                         ? <button className="sm" disabled={busy === r.id} onClick={() => act(r.id, 'approve')}>Approve</button>
                         : <button className="sm" disabled={busy === r.id} onClick={() => act(r.id, 'revoke')}>Revoke</button>}
-                      {isSuper && r.approved && (
+                      {isSuper && (
                         <button className="sm" onClick={() => setEditDate({ uid: r.id, dateMode: r.dateMode || 'joinDay', customDay: r.customDay || 1 })}>
                           Set date
                         </button>
