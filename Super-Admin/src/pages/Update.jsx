@@ -1,34 +1,32 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api.js'
+import { api, getToken } from '../api.js'
 import { Loading, ErrorNote, fmtTime } from '../components/Helpers.jsx'
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-const BUCKET = 'apk-releases'
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
-// Uploads the APK straight to Supabase Storage with an XHR so we can show a
-// real upload progress bar (big files). Returns the public URL.
+// Uploads the APK to the backend, which stores it in Firebase Storage and
+// returns a public download URL. XHR gives a real progress bar for big files.
 function uploadApk(file, onProgress) {
   return new Promise((resolve, reject) => {
-    const path = `wimm-${Date.now()}.apk`
+    const fd = new FormData()
+    fd.append('file', file)
     const xhr = new XMLHttpRequest()
-    xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`)
-    xhr.setRequestHeader('Authorization', `Bearer ${SUPABASE_ANON_KEY}`)
-    xhr.setRequestHeader('apikey', SUPABASE_ANON_KEY)
-    xhr.setRequestHeader('Content-Type', 'application/vnd.android.package-archive')
-    xhr.setRequestHeader('x-upsert', 'true')
+    xhr.open('POST', `${API_BASE}/api/app-update/upload-apk`)
+    const token = getToken()
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(e.loaded / e.total)
     }
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(`${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`)
+        try { resolve(JSON.parse(xhr.responseText).url) }
+        catch (err) { reject(new Error('Bad response from server')) }
       } else {
         reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText}`))
       }
     }
     xhr.onerror = () => reject(new Error('Network error during upload'))
-    xhr.send(file)
+    xhr.send(fd)
   })
 }
 
@@ -46,10 +44,6 @@ export default function Update() {
 
   async function push() {
     setErr(''); setMsg('')
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      setErr('Supabase env vars missing (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).')
-      return
-    }
     if (!file) { setErr('Choose an APK file first.'); return }
     if (!form.versionCode) { setErr('Enter the new versionCode.'); return }
 

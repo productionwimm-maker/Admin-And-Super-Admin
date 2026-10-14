@@ -24,7 +24,6 @@ DOC = "config"
 
 _ALLOWED_IMG = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 _MAX_IMG = 8 * 1024 * 1024
-_MAX_APK = 120 * 1024 * 1024
 
 
 class HomeBody(BaseModel):
@@ -115,26 +114,3 @@ async def upload_image(file: UploadFile = File(...),
     audit.log(admin, "app_customization.image.upload", "", {"ctype": ctype})
     return {"url": url}
 
-
-@router.post("/upload-apk")
-async def upload_apk(file: UploadFile = File(...),
-                     admin: CurrentAdmin = Depends(require_superadmin)):
-    """Upload a release APK to Firebase Storage; returns a public download URL
-    to paste into the App Update section."""
-    data = await file.read()
-    if not data:
-        raise HTTPException(400, "Empty file")
-    if len(data) > _MAX_APK:
-        raise HTTPException(400, "APK too large (max 120 MB)")
-    try:
-        bucket = get_bucket()
-        token = uuid.uuid4().hex
-        blob = bucket.blob(f"apk/wimm-{uuid.uuid4().hex}.apk")
-        blob.metadata = {"firebaseStorageDownloadTokens": token}
-        blob.upload_from_string(data, content_type="application/vnd.android.package-archive")
-        url = (f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}"
-               f"/o/{quote(blob.name, safe='')}?alt=media&token={token}")
-    except Exception as e:  # noqa: BLE001
-        raise HTTPException(500, f"APK upload failed: {e}")
-    audit.log(admin, "app_customization.apk.upload", "", {"size": len(data)})
-    return {"url": url}

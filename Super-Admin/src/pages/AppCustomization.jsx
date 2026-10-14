@@ -38,16 +38,12 @@ function Uploader({ label, accept, endpoint, onDone }) {
 
 export default function AppCustomization() {
   const [cfg, setCfg] = useState(null)
-  const [upd, setUpd] = useState(null)
   const [err, setErr] = useState('')
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    Promise.all([
-      api.get('/api/app-customization'),
-      api.get('/api/app-update').catch(() => ({})),
-    ]).then(([c, u]) => {
+    api.get('/api/app-customization').then((c) => {
       setCfg({
         home: { eyebrow: c.home?.eyebrow || '', texts: (c.home?.texts?.length ? c.home.texts : ['']) },
         contact: { email: c.contact?.email || '', phone: c.contact?.phone || '', whatsapp: c.contact?.whatsapp || '', address: c.contact?.address || '' },
@@ -59,7 +55,6 @@ export default function AppCustomization() {
           dismissible: c.banner?.dismissible !== false,
         },
       })
-      setUpd({ apkUrl: u.apkUrl || '', message: u.message || '', versionCode: u.versionCode || 0, versionName: u.versionName || '', active: !!u.active })
     }).catch((e) => setErr(e.message))
   }, [])
 
@@ -75,15 +70,7 @@ export default function AppCustomization() {
       flash('Customization saved — the app updates live.')
     } catch (e) { setErr(e.message) } finally { setBusy(false) }
   }
-  async function saveUpd() {
-    setBusy(true); setErr('')
-    try {
-      await api.put('/api/app-update', { ...upd, versionCode: Number(upd.versionCode) || 0 })
-      flash('App update pushed.')
-    } catch (e) { setErr(e.message) } finally { setBusy(false) }
-  }
-
-  if (!cfg || !upd) return <div className="page">{err ? <ErrorNote error={err} /> : <Loading />}</div>
+  if (!cfg) return <div className="page">{err ? <ErrorNote error={err} /> : <Loading />}</div>
 
   const H = cfg.home, C = cfg.contact, B = cfg.banner
   const setHome = (p) => setCfg({ ...cfg, home: { ...H, ...p } })
@@ -179,27 +166,9 @@ export default function AppCustomization() {
         <button className="primary" disabled={busy} onClick={saveCfg}>Save customization</button>
       </div>
 
-      {/* ── App update ── */}
-      <div className="card" style={{ marginTop: 24 }}>
-        <h3>App update</h3>
-        <p className="muted">Upload a new release APK to Firebase Storage and push it; the app shows an in-app update.</p>
-        <div className="row" style={{ gap: 12, alignItems: 'center' }}>
-          <input style={{ flex: 1 }} value={upd.apkUrl} onChange={(e) => setUpd({ ...upd, apkUrl: e.target.value })} placeholder="APK download URL (or upload →)" />
-          <Uploader label="Upload APK" accept=".apk" endpoint="/api/app-customization/upload-apk" onDone={(url) => setUpd({ ...upd, apkUrl: url })} />
-        </div>
-        <div className="row" style={{ gap: 12, marginTop: 8 }}>
-          <div style={{ flex: 1 }}><label>Version name</label>
-            <input value={upd.versionName} onChange={(e) => setUpd({ ...upd, versionName: e.target.value })} placeholder="1.7" /></div>
-          <div style={{ flex: 1 }}><label>Version code</label>
-            <input type="number" value={upd.versionCode} onChange={(e) => setUpd({ ...upd, versionCode: e.target.value })} placeholder="14" /></div>
-        </div>
-        <label>Update message</label>
-        <input value={upd.message} onChange={(e) => setUpd({ ...upd, message: e.target.value })} placeholder="What's new in this version" />
-        <label className="row"><input type="checkbox" style={{ width: 'auto' }} checked={upd.active} onChange={(e) => setUpd({ ...upd, active: e.target.checked })} /> Active (show the update to users)</label>
-        <div className="row" style={{ marginTop: 12 }}>
-          <button className="primary" disabled={busy} onClick={saveUpd}>Push app update</button>
-        </div>
-      </div>
+      <p className="muted" style={{ marginTop: 18 }}>
+        To push a new app version, use the <b>App Update</b> tab (it uploads the APK to Firebase Storage).
+      </p>
     </div>
   )
 }
