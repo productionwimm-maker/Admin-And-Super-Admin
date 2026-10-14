@@ -41,8 +41,13 @@ export default function AppCustomization() {
   const [err, setErr] = useState('')
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
+  const [subthemes, setSubthemes] = useState([])
+  const [products, setProducts] = useState([])
 
   useEffect(() => {
+    // Lists for the banner target pickers (so the admin selects, not types an id).
+    api.get('/api/wellness/subthemes').then((r) => setSubthemes(r || [])).catch(() => {})
+    api.get('/api/wellness/products').then((r) => setProducts(r || [])).catch(() => {})
     api.get('/api/app-customization').then((c) => {
       setCfg({
         home: { eyebrow: c.home?.eyebrow || '', texts: (c.home?.texts?.length ? c.home.texts : ['']) },
@@ -147,10 +152,32 @@ export default function AppCustomization() {
               {ACTIONS.map((a) => <option key={a.v} value={a.v}>{a.label}</option>)}
             </select></div>
         </div>
-        {(B.action === 'url' || B.action === 'product' || B.action === 'subtheme') && (
+        {B.action === 'url' && (
           <>
-            <label>{B.action === 'url' ? 'URL' : B.action === 'product' ? 'Product id' : 'Sub-theme id'}</label>
-            <input value={B.target} onChange={(e) => setBanner({ target: e.target.value })} />
+            <label>URL</label>
+            <input value={B.target} onChange={(e) => setBanner({ target: e.target.value })} placeholder="https://…" />
+          </>
+        )}
+        {B.action === 'product' && (
+          <>
+            <label>Product</label>
+            <select value={B.target} onChange={(e) => setBanner({ target: e.target.value })}>
+              <option value="">— Select a product —</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}{p.subthemeName ? ` · ${p.subthemeName}` : ''}</option>
+              ))}
+            </select>
+          </>
+        )}
+        {B.action === 'subtheme' && (
+          <>
+            <label>Sub-theme</label>
+            <select value={B.target} onChange={(e) => setBanner({ target: e.target.value })}>
+              <option value="">— Select a sub-theme —</option>
+              {subthemes.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
           </>
         )}
         <div className="row" style={{ gap: 12, marginTop: 8, alignItems: 'center' }}>
