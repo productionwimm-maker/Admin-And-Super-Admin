@@ -39,7 +39,7 @@ def get_flags(admin: CurrentAdmin = Depends(get_current_admin)):
 
 @router.put("/flags")
 def set_flags(body: FeatureFlagsBody, admin: CurrentAdmin = Depends(require_superadmin)):
-    rec = store.collection(COL).set(DOC, {
+    rec = store.collection(COL).update(DOC, {
         "flags": body.flags, "comingSoon": body.comingSoon,
         "forceUpdate": body.forceUpdate, "appDiscount": body.appDiscount,
         "updatedAtMillis": store.now_ms(),
